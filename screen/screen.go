@@ -4,12 +4,6 @@ import (
 	"fmt"
 )
 
-type Screen interface {
-	Write(pos int, line string) bool
-	Clear() bool
-	Prompt()
-}
-
 type writeMsg struct {
 	pos        int
 	line       string
@@ -28,25 +22,25 @@ const (
 	clrScreeen string = csi + "2J"
 )
 
-var Instance = screenImpl{0, make(chan writeMsg)}
+var screen = screenImpl{0, make(chan writeMsg)}
 
-func (s *screenImpl) Write(pos int, line string) {
-	s.ch <- writeMsg{pos, line, s.promptLine}
+func Write(pos int, line string) {
+	screen.ch <- writeMsg{pos, line, screen.promptLine}
 }
 
-func (s *screenImpl) Clear() {
-	s.ch <- writeMsg{0, clrScreeen, 0}
+func Clear() {
+	screen.ch <- writeMsg{0, fmt.Sprintf(clrScreeen+gotoLine, 1), 0}
 }
 
-func (s *screenImpl) Prompt(line int) {
-	s.promptLine = line
-	s.ch <- writeMsg{0, fmt.Sprintf(gotoLine+clearLine+"> ", line), 0}
+func Prompt(line int) {
+	screen.promptLine = line // Simply because save and restore cursor don't work
+	screen.ch <- writeMsg{0, fmt.Sprintf(gotoLine+clearLine+"> ", line), 0}
 }
 
 func init() {
 	go func() {
 		for {
-			msg := <-Instance.ch
+			msg := <-screen.ch
 			if msg.pos > 0 {
 				fmt.Printf(gotoLine+clearLine+msg.line, msg.pos)
 				if msg.promptLine > 0 {

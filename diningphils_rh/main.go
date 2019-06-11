@@ -63,7 +63,7 @@ func setup() {
 func (p *Philosopher) pickUp(f *Fork) {
 	f.cond.L.Lock()
 	for f.owner != nil {
-		screen.Instance.Write(p.id, fmt.Sprintf("%s waiting for fork %d", p.name, f.id))
+		screen.Write(p.id, fmt.Sprintf("%s waiting for fork %d", p.name, f.id))
 		f.cond.Wait()
 	}
 	f.owner = p
@@ -87,14 +87,14 @@ func randSecs(min int, max int) int64 {
 
 func (p Philosopher) think() {
 	secs := randSecs(ThinkMin, ThinkMax)
-	screen.Instance.Write(p.id, fmt.Sprintf("%s thinking for %d secs", p.name, secs))
+	screen.Write(p.id, fmt.Sprintf("%s thinking for %d secs", p.name, secs))
 	//log.Printf("Philosopher %d thinking for %d secs",p.id,secs)
 	time.Sleep(time.Duration(secs * Nanos))
 }
 
 func (p Philosopher) eat() {
 	secs := randSecs(EatMin, EatMax)
-	screen.Instance.Write(p.id, fmt.Sprintf("%s eating for %d secs", p.name, secs))
+	screen.Write(p.id, fmt.Sprintf("%s eating for %d secs", p.name, secs))
 	//log.Printf("Philosopher %d eat for %d secs",p.id,secs)
 	time.Sleep(time.Duration(secs * Nanos))
 }
@@ -117,14 +117,14 @@ func readCmd() {
 		if err != nil {
 			cmd = "quit"
 		}
-		screen.Instance.Prompt(NPhils + 2)
+		screen.Prompt(NPhils + 2)
 	}
-	screen.Instance.Clear()
+	screen.Clear()
 }
 
 func main() {
-	screen.Instance.Clear()
-	screen.Instance.Prompt(NPhils + 2)
+	screen.Clear()
+	screen.Prompt(NPhils + 2)
 	setup()
 	for _, p := range Philosophers {
 		go p.run()
