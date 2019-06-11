@@ -4,9 +4,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"github.com/wizardpb/diningphils-go/screen"
-	"log"
 	"math/big"
-	"os"
 	"sync"
 	"time"
 )
@@ -53,11 +51,6 @@ func setup() {
 
 		Philosophers[i] = Philosopher{id: i + 1, name: n, lowFork: lowFork, highFork: highFork}
 	}
-	fp, err := os.Create("app.log")
-	if err != nil {
-		panic(err.Error())
-	}
-	log.SetOutput(fp)
 }
 
 func (p *Philosopher) pickUp(f *Fork) {
@@ -67,14 +60,12 @@ func (p *Philosopher) pickUp(f *Fork) {
 		f.cond.Wait()
 	}
 	f.owner = p
-	//log.Printf("Phil %d grabs fork %d", p.id, f.id)
 	f.cond.L.Unlock()
 }
 
 func (p *Philosopher) putDown(f *Fork) {
 	f.cond.L.Lock()
 	f.owner = nil
-	//log.Printf("Philosopher %d outs down fork %d",p.id,f.id)
 	f.cond.L.Unlock()
 	f.cond.Signal()
 }
@@ -82,20 +73,18 @@ func (p *Philosopher) putDown(f *Fork) {
 func randSecs(min int, max int) int64 {
 	var maxR = big.NewInt(int64(max - min))
 	t, _ := rand.Int(rand.Reader, maxR)
-	return (int64(min) + t.Int64())
+	return int64(min) + t.Int64()
 }
 
 func (p Philosopher) think() {
 	secs := randSecs(ThinkMin, ThinkMax)
 	screen.Write(p.id, fmt.Sprintf("%s thinking for %d secs", p.name, secs))
-	//log.Printf("Philosopher %d thinking for %d secs",p.id,secs)
 	time.Sleep(time.Duration(secs * Nanos))
 }
 
 func (p Philosopher) eat() {
 	secs := randSecs(EatMin, EatMax)
 	screen.Write(p.id, fmt.Sprintf("%s eating for %d secs", p.name, secs))
-	//log.Printf("Philosopher %d eat for %d secs",p.id,secs)
 	time.Sleep(time.Duration(secs * Nanos))
 }
 
