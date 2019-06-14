@@ -28,7 +28,8 @@ type Fork struct {
 }
 
 type PhilState struct {
-	ch        chan message
+	inCh      chan message
+	outCh     chan message
 	forkId    int
 	requested bool
 }
@@ -98,6 +99,11 @@ func sendIn(msg message, c chan message, delay time.Duration) {
 	}()
 }
 
+// Cycle phil ids 0-4
+func nextPhilId(i int) int {
+	return (i + 1) % NPhils
+}
+
 // Philosopher methods
 
 func (p *Philosopher) hasFork(sp *PhilState) bool {
@@ -121,7 +127,7 @@ func (p *Philosopher) isDirty(sp *PhilState) bool {
 	fork, ok := p.forks[sp.forkId]
 	assert(func() bool {
 		return ok
-	}, "Checking dirty on non-existen fork!")
+	}, "Checking dirty on non-existent fork!")
 	return fork.dirty
 }
 
@@ -176,19 +182,27 @@ func (m runState) process(p *Philosopher, sp *PhilState) {
 // newStat implements the full guarded command as specified in Chandy and Misra]
 
 func (p *Philosopher) newState(sp *PhilState) {
-	if sp != nil {
+
+	actOn := func(sp *PhilState) {
 		switch {
 		case p.isHungry() && p.hasForkRequest(sp) && !p.hasFork(sp):
-			sp.ch <- forkRequest{forkId: sp.forkId}
+			sp.outCh <- forkRequest{forkId: sp.forkId}
 			sp.requested = false
 		case !p.isEating() && p.hasForkRequest(sp) && p.isDirty(sp):
 			fork := p.forks[sp.forkId]
 			delete(p.forks, sp.forkId)
 			fork.dirty = false
-			sp.ch <- sentFork{fork: fork}
+			sp.outCh <- sentFork{fork: fork}
 		default:
 			//Do nothing
 		}
+	}
+
+	if sp != nil {
+		actOn(sp)
+	} else {
+		actOn(p.leftState)
+		actOn(p.rightState)
 	}
 
 	// Start eating if I am hungry and have both forks
@@ -201,10 +215,10 @@ func (p *Philosopher) run() {
 	var m message
 	for p.runFlag {
 		select {
-		case m = <-p.leftState.ch:
+		case m = <-p.leftState.inCh:
 			m.process(p, p.leftState)
 			p.newState(p.leftState)
-		case m = <-p.rightState.ch:
+		case m = <-p.rightState.inCh:
 			m.process(p, p.rightState)
 			p.newState(p.rightState)
 		case m = <-p.tickChan:
@@ -218,8 +232,77 @@ var (
 	PhilNames    [NPhils]string = [NPhils]string{"Kant", "Marx", "Hegel", "Spinoza", "Plato"}
 	Philosophers [NPhils]Philosopher
 	Forks        [NPhils]Fork
+	Chans        [NPhils][2]chan message
 )
+
+func NewPhilosopher(id int, state int, leftFork *Fork, rightFork *Fork, leftReq bool, rightReq bool) Philosopher {
+	var leftIndex, rightIndex = id, nextPhilId(id)
+
+	var leftState, rightState = new(PhilState), new(PhilState)
+	leftState.outCh = Chans[leftIndex][0]
+	leftState.inCh = Chans[leftIndex][1]
+	leftState.forkId = leftIndex
+	leftState.requested = leftReq
+	rightState.outCh = Chans[rightIndex][1]
+	rightState.inCh = Chans[rightIndex][0]
+	rightState.forkId = rightIndex
+	rightState.requested = rightReq
+
+	forks := make(map[int]*Fork)
+	if leftFork != nil {
+		forks[leftIndex] = leftFork
+	}
+	if rightFork != nil {
+		forks[rightIndex] = rightFork
+	}
+
+	return Philosopher{
+		runFlag: true,
+		id:      id, name: PhilNames[id],
+		state:     state,
+		forks:     forks,
+		tickChan:  make(chan message, 1),
+		leftState: leftState, rightState: rightState,
+	}
+}
+
+func setup() {
+
+	for i := range PhilNames {
+		Forks[i] = Fork{id: i, dirty: true}
+		Chans[i][0], Chans[i][1] = make(chan message, 1), make(chan message, 1)
+	}
+
+	for i := range PhilNames {
+		leftFork, rightFork := &Forks[i], &Forks[nextPhilId(i)]
+		leftReq, rightReq := false, false
+
+		/*
+		 * Set up forks so the dependency graph is acyclic: phil 0 has both forks, phil 1 has none,
+		 * the rest have the left fork only
+		 *
+		 * Request flags are set opposite this so that all philospohers can initial request the missing fork
+		 */
+		switch i {
+		case 0:
+			break // Already set
+		case 1:
+			leftFork, rightFork = nil, nil
+			leftReq, rightReq = true, true
+		default:
+			rightFork = nil
+			rightReq = true
+		}
+
+		Philosophers[i] = NewPhilosopher(i, THINKING, leftFork, rightFork, leftReq, rightReq)
+	}
+}
 
 func main() {
 
+	setup()
+
+	for _, p := range Philosophers {
+		p.tickChan <- runState{false}
+	}
 }
