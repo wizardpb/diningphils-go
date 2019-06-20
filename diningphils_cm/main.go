@@ -69,10 +69,6 @@ type sentFork struct {
 	fork *Fork
 }
 
-//type runState struct {
-//	runFlag bool
-//}
-
 // Utilities
 func assert(f func() bool, msg string) {
 	if !f() {
@@ -183,10 +179,6 @@ func (m sentFork) process(p *Philosopher, sp *PhilState) {
 	log.Printf("%s (%d) receives fork %d", p.name, p.id, sp.forkId)
 	p.forks[m.fork.id] = m.fork
 }
-
-//func (m runState) process(p *Philosopher, sp *PhilState) {
-//	p.runFlag = m.runFlag
-//}
 
 // newStat implements the full guarded command as specified in Chandy and Misra]
 
