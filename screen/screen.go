@@ -4,6 +4,8 @@ import (
 	"fmt"
 )
 
+var silent = false
+
 type writeMsg struct {
 	pos        int
 	line       string
@@ -24,8 +26,14 @@ const (
 
 var screen = screenImpl{0, make(chan writeMsg)}
 
+func Silent(on bool) {
+	silent = on
+}
+
 func Write(pos int, line string) {
-	screen.ch <- writeMsg{pos, line, screen.promptLine}
+	if !silent {
+		screen.ch <- writeMsg{pos, line, screen.promptLine}
+	}
 }
 
 func Clear() {

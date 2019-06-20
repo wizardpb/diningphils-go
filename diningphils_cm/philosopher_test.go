@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/wizardpb/diningphils-go/screen"
 	"testing"
 	"time"
 )
@@ -9,6 +10,7 @@ import (
 func TestChanAssignments(t *testing.T) {
 
 	setup()
+	screen.Silent(true)
 
 	// for all philosophers, their right in and out chans should be the next out and in chans
 
@@ -22,8 +24,10 @@ func TestChanAssignments(t *testing.T) {
 
 func TestRequest(t *testing.T) {
 	setup()
+	screen.Silent(true)
 
 	p := &Philosophers[1]
+	p.state = THINKING
 
 	// Set it going
 	go func() { p.run() }()
@@ -54,8 +58,10 @@ func TestRequest(t *testing.T) {
 
 func TestSendFork(t *testing.T) {
 	setup()
+	screen.Silent(true)
 
 	p := &Philosophers[0]
+	p.state = THINKING
 
 	// Set it going
 	go func() { p.run() }()
@@ -89,6 +95,7 @@ func TestSendFork(t *testing.T) {
 func TestStartsEating(t *testing.T) {
 
 	setup()
+	screen.Silent(true)
 
 	p := &Philosophers[0]
 
@@ -102,5 +109,33 @@ func TestStartsEating(t *testing.T) {
 
 	if !p.isEating() {
 		t.Error("p not eating after 1ms")
+	}
+}
+
+func TestRandomSecs(t *testing.T) {
+
+	for i := 0; i < 1000; i++ {
+		d := int64(randomSeconds(minThink, maxThink)) / nanos
+		if d < minThink || d > maxThink {
+			t.Errorf("d out of range: %d", d)
+		}
+	}
+}
+
+func TestStateString(t *testing.T) {
+	setup()
+	screen.Silent(true)
+
+	s := Philosophers[0].stateString()
+
+	expected := "    Kant: Inactive, has forks 0,1, has requested no forks"
+	if s != expected {
+		t.Error("bad state string: " + s)
+	}
+
+	s = Philosophers[1].stateString()
+	expected = "    Marx: Inactive, has no forks, has requested left and right forks"
+	if s != expected {
+		t.Error("bad state string: " + s)
 	}
 }

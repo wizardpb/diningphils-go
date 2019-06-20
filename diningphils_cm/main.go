@@ -3,21 +3,25 @@ package main
 import (
 	"crypto/rand"
 	"fmt"
+	"github.com/wizardpb/diningphils-go/screen"
+	"log"
 	"math/big"
+	"strings"
 	"time"
 )
 
 const (
 	nanos = 1000000000 // # of nanoseconds in a second
 
+	INACTIVE = 0
 	THINKING = 1
 	HUNGRY   = 2
 	EATING   = 3
 
-	minEat   = 5
-	maxEat   = 20
-	minThink = 7
-	maxThink = 25
+	minEat   = 1
+	maxEat   = 5
+	minThink = 1
+	maxThink = 5
 
 	NPhils = 5
 )
@@ -65,14 +69,14 @@ type sentFork struct {
 	fork *Fork
 }
 
-type runState struct {
-	runFlag bool
-}
+//type runState struct {
+//	runFlag bool
+//}
 
 // Utilities
 func assert(f func() bool, msg string) {
 	if !f() {
-		panic(msg)
+		log.Panic(msg)
 	}
 }
 
@@ -133,6 +137,7 @@ func (p *Philosopher) isDirty(sp *PhilState) bool {
 
 func (p *Philosopher) eat() {
 	assert(func() bool { return len(p.forks) == 2 }, "Eating without forks!")
+	log.Printf("%s (%d) is now eating", p.name, p.id)
 	p.state = EATING
 	for _, f := range p.forks {
 		f.dirty = true
@@ -141,11 +146,13 @@ func (p *Philosopher) eat() {
 }
 
 func (p *Philosopher) think() {
+	log.Printf("%s (%d) is now thinking", p.name, p.id)
 	p.state = THINKING
 	sendIn(nextState{state: HUNGRY}, p.tickChan, randomSeconds(minThink, maxThink))
 }
 
 func (p *Philosopher) hungry() {
+	log.Printf("%s (%d) is now hungry", p.name, p.id)
 	p.state = HUNGRY
 }
 
@@ -163,6 +170,7 @@ func (m nextState) process(p *Philosopher, sp *PhilState) {
 
 func (m forkRequest) process(p *Philosopher, sp *PhilState) {
 	checkForkId(p, sp, m.forkId, "Received fork request")
+	log.Printf("%s (%d) receives request for fork %d", p.name, p.id, sp.forkId)
 	sp.requested = true
 }
 
@@ -172,23 +180,30 @@ func (m sentFork) process(p *Philosopher, sp *PhilState) {
 	assert(
 		func() bool { return !p.hasFork(sp) },
 		fmt.Sprintf("Received fork: already has fork %d", m.fork.id))
+	log.Printf("%s (%d) receives fork %d", p.name, p.id, sp.forkId)
 	p.forks[m.fork.id] = m.fork
 }
 
-func (m runState) process(p *Philosopher, sp *PhilState) {
-	p.runFlag = m.runFlag
-}
+//func (m runState) process(p *Philosopher, sp *PhilState) {
+//	p.runFlag = m.runFlag
+//}
 
 // newStat implements the full guarded command as specified in Chandy and Misra]
 
-func (p *Philosopher) newState(sp *PhilState) {
+func (p *Philosopher) newState() {
+
+	if p.state == INACTIVE {
+		return
+	}
 
 	actOn := func(sp *PhilState) {
 		switch {
 		case p.isHungry() && p.hasForkRequest(sp) && !p.hasFork(sp):
+			log.Printf("%s requesting fork %d", p.name, sp.forkId)
 			sp.outCh <- forkRequest{forkId: sp.forkId}
 			sp.requested = false
-		case !p.isEating() && p.hasForkRequest(sp) && p.isDirty(sp):
+		case !p.isEating() && p.hasForkRequest(sp) && p.hasFork(sp) && p.isDirty(sp):
+			log.Printf("%s sending fork %d", p.name, sp.forkId)
 			fork := p.forks[sp.forkId]
 			delete(p.forks, sp.forkId)
 			fork.dirty = false
@@ -198,33 +213,83 @@ func (p *Philosopher) newState(sp *PhilState) {
 		}
 	}
 
-	if sp != nil {
-		actOn(sp)
-	} else {
-		actOn(p.leftState)
-		actOn(p.rightState)
-	}
+	actOn(p.leftState)
+	actOn(p.rightState)
 
 	// Start eating if I am hungry and have both forks
 	if p.isHungry() && p.hasFork(p.leftState) && p.hasFork(p.rightState) {
 		p.eat()
 	}
+	log.Printf("%s (%d) now %s, has %s, has request for %s", p.name, p.id, p.eatState(), p.forkState(), p.requestState())
+}
+
+func (p *Philosopher) eatState() string {
+	stateStr := ""
+	switch p.state {
+	case INACTIVE:
+		stateStr = "Inactive"
+	case THINKING:
+		stateStr = "Thinking"
+	case HUNGRY:
+		stateStr = "Hungry"
+	case EATING:
+		stateStr = "Eating"
+	}
+	return stateStr
+}
+
+func (p *Philosopher) forkState() string {
+	s := []string{}
+	for _, f := range p.forks {
+		s = append(s, fmt.Sprintf("%d", f.id))
+	}
+
+	forkStr := strings.Join(s, ",")
+	switch len(s) {
+	case 0:
+		forkStr = "no forks"
+	case 1:
+		forkStr = "fork " + forkStr
+	case 2:
+		forkStr = "forks " + forkStr
+	}
+	return forkStr
+}
+
+func (p *Philosopher) requestState() string {
+	reqStr := ""
+	switch {
+	case p.leftState.requested && p.rightState.requested:
+		reqStr = fmt.Sprintf("left and right forks (%d and %d)", p.leftState.forkId, p.rightState.forkId)
+	case p.leftState.requested && !p.rightState.requested:
+		reqStr = fmt.Sprintf("left fork (%d)", p.leftState.forkId)
+	case !p.leftState.requested && p.rightState.requested:
+		reqStr = fmt.Sprintf("right fork (%d)", p.rightState.forkId)
+	case !p.leftState.requested && !p.rightState.requested:
+		reqStr = "no forks"
+	}
+	return reqStr
+}
+
+func (p *Philosopher) stateString() string {
+	return fmt.Sprintf("%8s: %s, has %s, has request for %s", p.name, p.eatState(), p.forkState(), p.requestState())
 }
 
 func (p *Philosopher) run() {
 	var m message
+	log.Printf("%s now running", p.name)
 	for p.runFlag {
+		screen.Write(p.id+1, p.stateString())
 		select {
 		case m = <-p.leftState.inCh:
 			m.process(p, p.leftState)
-			p.newState(p.leftState)
 		case m = <-p.rightState.inCh:
 			m.process(p, p.rightState)
-			p.newState(p.rightState)
 		case m = <-p.tickChan:
 			m.process(p, nil)
-			p.newState(nil)
 		}
+		p.newState()
+
 	}
 }
 
@@ -294,15 +359,34 @@ func setup() {
 			rightReq = true
 		}
 
-		Philosophers[i] = NewPhilosopher(i, THINKING, leftFork, rightFork, leftReq, rightReq)
+		Philosophers[i] = NewPhilosopher(i, INACTIVE, leftFork, rightFork, leftReq, rightReq)
 	}
+}
+
+func readCmd() {
+	var cmd string = ""
+	for cmd != "quit" {
+		_, err := fmt.Scanln(&cmd)
+		if err != nil {
+			cmd = "quit"
+		}
+		screen.Prompt(NPhils + 2)
+	}
+	screen.Clear()
 }
 
 func main() {
 
 	setup()
+	screen.Clear()
 
-	for _, p := range Philosophers {
-		p.tickChan <- runState{false}
+	for i := range Philosophers {
+		p := &Philosophers[i]
+		log.Printf("about to run %d, name=%s", p.id, p.name)
+		go p.run()
+		p.think()
 	}
+
+	time.Sleep(time.Millisecond)
+	readCmd()
 }
