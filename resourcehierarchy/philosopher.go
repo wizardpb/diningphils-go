@@ -17,7 +17,7 @@ type Philosopher struct {
 	forkOrder [2]*Fork
 }
 
-func (p Philosopher) NewState() {
+func (p *Philosopher) NewState() {
 	switch p.State {
 	case philstate.Hungry:
 		for _, f := range p.forkOrder {
@@ -32,21 +32,21 @@ func (p Philosopher) NewState() {
 	}
 }
 
-func (p Philosopher) pickUp(f *Fork) {
+func (p *Philosopher) pickUp(f *Fork) {
 	f.cond.L.Lock()
 	for f.IsOwned() {
-		p.WriteString(fmt.Sprintf("%s waiting for fork %d", p.Name, f.ID))
+		p.WriteString(fmt.Sprintf("waiting for fork %d", f.ID))
 		f.cond.Wait()
 	}
-	p.WriteString(fmt.Sprintf("%s has fork %d", p.Name, f.ID))
+	p.WriteString(fmt.Sprintf("has fork %d", f.ID))
 	f.SetOwner(p.ID)
 	f.cond.L.Unlock()
 }
 
-func (p Philosopher) putDown(f *Fork) {
+func (p *Philosopher) putDown(f *Fork) {
 	f.cond.L.Lock()
 	f.SetUnowned()
-	p.WriteString(fmt.Sprintf("%s puts down fork %d", p.Name, f.ID))
+	p.WriteString(fmt.Sprintf("puts down fork %d", f.ID))
 	f.cond.L.Unlock()
 	f.cond.Signal()
 }

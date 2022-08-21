@@ -7,5 +7,5 @@ import (
 
 type Fork struct {
 	shared.ForkBase
-	cond *sync.Cond // Conditional to sync access
+	cond *sync.Cond // Conditional to sync access/update to Owner
 }

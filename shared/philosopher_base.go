@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"fmt"
 	"github.com/wizardpb/diningphils-go/screen"
 	"github.com/wizardpb/diningphils-go/shared/philstate"
 )
@@ -17,13 +18,13 @@ type PhilosopherBase struct {
 
 // Think - philosopher is thinking, arrange for them to go hungry
 func (pb *PhilosopherBase) Think() {
-	pb.WriteString(pb.Name + " now thinking")
+	pb.WriteString("now thinking")
 	pb.DelaySend(pb.ThinkRange, &NewState{NewState: philstate.Hungry})
 }
 
 // Eat - set the philosopher eating
 func (pb *PhilosopherBase) Eat() {
-	pb.WriteString(pb.Name + " now eating")
+	pb.WriteString("now eating")
 	pb.DelaySend(pb.EatRange, &NewState{NewState: philstate.Thinking})
 }
 
@@ -56,7 +57,7 @@ func (pb *PhilosopherBase) Runnable() bool {
 
 // WriteString writes a string to the screen on the line dedicated to the philosopher
 func (pb *PhilosopherBase) WriteString(s string) {
-	screen.Write(pb.ID+1, s)
+	screen.Write(pb.ID+1, fmt.Sprintf("%s(%d) %s", pb.Name, pb.ID, s))
 }
 
 // DelaySend sends the given message to the Philosopher after a random wait given by t
