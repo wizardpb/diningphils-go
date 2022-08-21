@@ -16,17 +16,20 @@ func (p *Philosopher) NewState() {
 		p.PhilosopherBase.State = philstate.Eating
 		p.PhilosopherBase.Eat()
 	case philstate.Thinking:
-		p.PhilosopherBase.Thinking()
+		p.PhilosopherBase.Think()
 	}
 }
 
-func Factory(params shared.CreateParams) shared.Philosopher {
+func Factory(params shared.CreateParams) (shared.Philosopher, shared.Fork) {
 	return &Philosopher{&shared.PhilosopherBase{
-		ID:          params.ID,
-		Name:        params.Name,
-		State:       philstate.Inactive,
-		ThinkRange:  params.ThinkRange,
-		EatRange:    params.EatRange,
-		MessageChan: make(chan shared.Message, 0),
-	}}
+			ID:          params.ID,
+			Name:        params.Name,
+			State:       philstate.Inactive,
+			ThinkRange:  params.ThinkRange,
+			EatRange:    params.EatRange,
+			MessageChan: make(chan shared.Message, 0),
+		}}, &shared.ForkBase{
+			ID:    params.ID,
+			Owner: -1,
+		}
 }

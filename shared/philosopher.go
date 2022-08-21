@@ -20,7 +20,7 @@ type CreateParams struct {
 	EatRange   TimeRange
 }
 
-type Factory func(params CreateParams) Philosopher
+type Factory func(params CreateParams) (Philosopher, Fork)
 
 func Run(p Philosopher) {
 	go func() {

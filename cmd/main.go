@@ -3,56 +3,59 @@ package main
 import (
 	"fmt"
 	"github.com/wizardpb/diningphils-go/fingers"
+	"github.com/wizardpb/diningphils-go/resourcehierarchy"
 	"github.com/wizardpb/diningphils-go/screen"
 	"github.com/wizardpb/diningphils-go/shared"
+	"os"
 	"time"
-)
-
-const (
-	NPhils   int = 5
-	ThinkMin     = 5
-	ThinkMax     = 15
-	EatMin       = 5
-	EatMax       = 15
-)
-
-var (
-	PhilNames    [NPhils]string = [5]string{"Arendt", "Butler", "Churchland", "deBeauvoir", "Themistoclea"}
-	Philosophers [NPhils]shared.Philosopher
-	Forks        [NPhils]*shared.Fork
 )
 
 func Initialize(f shared.Factory) {
 	// Create Forks and Philosophers
-	for i, name := range PhilNames {
-		Forks[i] = &shared.Fork{
-			ID:    i,
-			Owner: -1,
-		}
-
+	for i, name := range shared.PhilNames {
 		params := shared.CreateParams{
 			ID:         i,
 			Name:       name,
-			ThinkRange: shared.TimeRange{Min: ThinkMin, Max: ThinkMax, Unit: time.Second},
-			EatRange:   shared.TimeRange{Min: EatMin, Max: EatMax, Unit: time.Second},
+			ThinkRange: shared.TimeRange{Min: shared.ThinkMin, Max: shared.ThinkMax, Unit: time.Second},
+			EatRange:   shared.TimeRange{Min: shared.EatMin, Max: shared.EatMax, Unit: time.Second},
 		}
-		Philosophers[i] = f(params)
+		shared.Philosophers[i], shared.Forks[i] = f(params)
+	}
+}
+
+func writeString(f *os.File, s string) {
+	_, err := f.WriteString(s)
+	if err != nil {
+		os.Exit(4)
 	}
 }
 
 func main() {
 
-	screen.Clear()
-	Initialize(fingers.Factory)
+	if len(os.Args) < 2 {
+		writeString(os.Stderr, "missing implementation argument")
+		os.Exit(1)
+	}
 
-	for _, p := range Philosophers {
+	screen.Clear()
+	switch os.Args[1] {
+	case "fingers", "f":
+		Initialize(fingers.Factory)
+	case "resourcehierarchy", "rh":
+		Initialize(resourcehierarchy.Factory)
+	default:
+		writeString(os.Stderr, "unknown implementation: "+os.Args[1])
+		os.Exit(2)
+	}
+
+	for _, p := range shared.Philosophers {
 		shared.Run(p)
 	}
 
 	readCmd()
 }
 
-const PromptLine = NPhils + 2
+const PromptLine = shared.NPhils + 2
 
 func readCmd() {
 	screen.Prompt(PromptLine)

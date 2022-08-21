@@ -1,6 +1,8 @@
 package shared
 
-type Fork struct {
-	ID    int
-	Owner int
+type Fork interface {
+	IsOwned() bool
+	IsOwnedBy(id int) bool
+	SetOwner(id int)
+	SetUnowned()
 }
