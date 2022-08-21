@@ -130,12 +130,12 @@ func TestStateString(t *testing.T) {
 
 	expected := "    Kant: Inactive, has forks 0,1, has requested no forks"
 	if s != expected {
-		t.Error("bad state string: " + s)
+		t.Error("bad philstate string: " + s)
 	}
 
 	s = Philosophers[1].stateString()
 	expected = "    Marx: Inactive, has no forks, has requested left and right forks"
 	if s != expected {
-		t.Error("bad state string: " + s)
+		t.Error("bad philstate string: " + s)
 	}
 }
