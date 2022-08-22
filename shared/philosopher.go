@@ -6,7 +6,7 @@ import (
 
 type Philosopher interface {
 	SendMessage(m Message)
-	RecvMessage() Message
+	Messages() chan Message
 	NewState()
 	SetState(enum philstate.Enum)
 	Runnable() bool
@@ -24,8 +24,7 @@ type Factory func(params CreateParams) (Philosopher, Fork)
 
 func Run(p Philosopher) {
 	go func() {
-		for p.Runnable() {
-			m := p.RecvMessage()
+		for m := range p.Messages() {
 			if m.Process(p) {
 				p.NewState()
 			}

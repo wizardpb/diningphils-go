@@ -44,6 +44,10 @@ func (pb *PhilosopherBase) RecvMessage() Message {
 	return m
 }
 
+func (pb *PhilosopherBase) Messages() chan Message {
+	return pb.MessageChan
+}
+
 // Start implements part of the Philosopher interface
 func (pb *PhilosopherBase) Start() {
 	pb.State = philstate.Thinking
