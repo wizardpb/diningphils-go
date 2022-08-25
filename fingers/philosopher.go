@@ -29,7 +29,7 @@ func Factory(params shared.CreateParams) (shared.Philosopher, shared.Fork) {
 			EatRange:    params.EatRange,
 			MessageChan: make(chan shared.Message, 0),
 		}}, &shared.ForkBase{
-			ID:    params.ID,
-			Owner: -1,
+			ID:     params.ID,
+			Holder: shared.UnOwned,
 		}
 }

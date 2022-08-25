@@ -13,7 +13,7 @@ const (
 // The fork to the left of Philosopher[i] is Fork[i]; the fork to the right is Fork[i+1 mod NPhils], since
 // the wrap around the table
 var (
-	PhilNames    [NPhils]string = [5]string{"Arendt", "Butler", "Churchland", "deBeauvoir", "Themistoclea"}
+	PhilNames    [NPhils]string = [NPhils]string{"Hannah Arendt", "Judith Butler", "Patricia Churchland", "Simone de Beauvoir", "Themistoclea"}
 	Philosophers [NPhils]Philosopher
 	Forks        [NPhils]Fork
 )

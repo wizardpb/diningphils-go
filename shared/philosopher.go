@@ -5,6 +5,7 @@ import (
 )
 
 type Philosopher interface {
+	GetID() int
 	SendMessage(m Message)
 	Messages() chan Message
 	NewState()

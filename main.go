@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/wizardpb/diningphils-go/chandymisra"
 	"github.com/wizardpb/diningphils-go/fingers"
 	"github.com/wizardpb/diningphils-go/resourcehierarchy"
 	"github.com/wizardpb/diningphils-go/screen"
@@ -43,6 +44,8 @@ func main() {
 		Initialize(fingers.Factory)
 	case "resourcehierarchy", "rh":
 		Initialize(resourcehierarchy.Factory)
+	case "chandymisra", "cm":
+		Initialize(chandymisra.Factory)
 	default:
 		writeString(os.Stderr, "unknown implementation: "+os.Args[1])
 		os.Exit(2)

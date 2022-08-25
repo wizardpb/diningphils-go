@@ -1,24 +1,34 @@
 package shared
 
-const UnOwned = -1
+const UnOwned = 0 // Default value ensures Forks always initialize free
 
+// ForkBase is a common element of all implementation Forks
 type ForkBase struct {
-	ID    int
-	Owner int
+	ID     int // The fork ID
+	Holder int // Who holds the fork - UnOwned if free
 }
 
-func (f *ForkBase) IsOwned() bool {
-	return f.Owner != UnOwned
+func (f *ForkBase) GetID() int {
+	return f.ID
 }
 
-func (f *ForkBase) IsOwnedBy(id int) bool {
-	return f.Owner == id
+// IsHeld indicates that the fork is held by someone
+func (f *ForkBase) IsHeld() bool {
+	return f.Holder != UnOwned
 }
 
-func (f *ForkBase) SetOwner(id int) {
-	f.Owner = id
+// IsHeldBy indicates that the fork is held by Philosopher id
+func (f *ForkBase) IsHeldBy(id int) bool {
+	// Philosophers index from 0, so increment to avoid the UnOwned value
+	return f.Holder == id+1
 }
 
-func (f *ForkBase) SetUnowned() {
-	f.Owner = UnOwned
+// SetHolder sets the Fork owner
+func (f *ForkBase) SetHolder(id int) {
+	f.Holder = id + 1
+}
+
+// SetFree marks the fork as free
+func (f *ForkBase) SetFree() {
+	f.Holder = UnOwned
 }

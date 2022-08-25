@@ -52,7 +52,7 @@ type message interface {
 	process(p *Philosopher, sp *PhilState)
 }
 
-// message implementations
+// messages implementations
 
 // nextState - set the next Philosopher state
 type nextState struct {

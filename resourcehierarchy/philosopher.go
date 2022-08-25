@@ -34,18 +34,20 @@ func (p *Philosopher) NewState() {
 
 func (p *Philosopher) pickUp(f *Fork) {
 	f.cond.L.Lock()
-	for f.IsOwned() {
-		p.WriteString(fmt.Sprintf("waiting for fork %d", f.ID))
+	// IsHeld() is correct here because we never pick up a fork without it being put down first
+	// The algorithm ensures that pickUp always 'happens before' putDown
+	for f.IsHeld() {
+		p.WriteString(fmt.Sprintf("is waiting for fork %d", f.ID))
 		f.cond.Wait()
 	}
 	p.WriteString(fmt.Sprintf("has fork %d", f.ID))
-	f.SetOwner(p.ID)
+	f.SetHolder(p.ID)
 	f.cond.L.Unlock()
 }
 
 func (p *Philosopher) putDown(f *Fork) {
 	f.cond.L.Lock()
-	f.SetUnowned()
+	f.SetFree()
 	p.WriteString(fmt.Sprintf("puts down fork %d", f.ID))
 	f.cond.L.Unlock()
 	f.cond.Signal()
@@ -65,8 +67,8 @@ func Factory(params shared.CreateParams) (shared.Philosopher, shared.Fork) {
 
 	f := &Fork{
 		ForkBase: shared.ForkBase{
-			ID:    params.ID,
-			Owner: shared.UnOwned,
+			ID:     params.ID,
+			Holder: shared.UnOwned,
 		},
 		cond: sync.NewCond(new(sync.Mutex)),
 	}
