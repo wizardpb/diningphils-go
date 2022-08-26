@@ -7,6 +7,7 @@ import (
 	"sync"
 )
 
+// Philosopher implementation
 type Philosopher struct {
 	*shared.PhilosopherBase
 	// fork order is a 2-tuple that defines the order the pick-up order of the left and right
@@ -17,21 +18,37 @@ type Philosopher struct {
 	forkOrder [2]*Fork
 }
 
-func (p *Philosopher) NewState() {
-	switch p.State {
-	case philstate.Hungry:
-		for _, f := range p.forkOrder {
-			p.pickUp(f)
+// Execute implements the Philosopher interface for the Resource hierarchy implementation. Collect the forks
+// when hungry, and put them back when done
+func (p *Philosopher) Execute(m shared.Message) {
+	switch mt := m.(type) {
+	case shared.NewState:
+		// Update our state value
+		p.State = mt.NewState
+		switch p.State {
+		case philstate.Hungry:
+			for _, f := range p.forkOrder {
+				p.pickUp(f)
+			}
+			p.Eat()
+		case philstate.Thinking:
+			for _, f := range p.forkOrder {
+				p.putDown(f)
+			}
+			p.StartThinking()
 		}
-		p.Eat()
-	case philstate.Thinking:
-		for _, f := range p.forkOrder {
-			p.putDown(f)
-		}
-		p.Think()
+	default:
+		panic("unknown message: " + m.String())
 	}
 }
 
+// Eat starts the Philosopher eating. Adds the invariant check
+func (p *Philosopher) Eat() {
+	p.CheckEating()
+	p.PhilosopherBase.Eat()
+}
+
+// Pick up a fork, wait if it's busy
 func (p *Philosopher) pickUp(f *Fork) {
 	f.cond.L.Lock()
 	// IsHeld() is correct here because we never pick up a fork without it being put down first
@@ -45,6 +62,7 @@ func (p *Philosopher) pickUp(f *Fork) {
 	f.cond.L.Unlock()
 }
 
+// Put the fork back down, and notify any wait-er
 func (p *Philosopher) putDown(f *Fork) {
 	f.cond.L.Lock()
 	f.SetFree()
@@ -53,6 +71,7 @@ func (p *Philosopher) putDown(f *Fork) {
 	f.cond.Signal()
 }
 
+// Factory function for Philosopher and Fork
 func Factory(params shared.CreateParams) (shared.Philosopher, shared.Fork) {
 
 	p := &Philosopher{
@@ -76,6 +95,8 @@ func Factory(params shared.CreateParams) (shared.Philosopher, shared.Fork) {
 	return p, f
 }
 
+// Start implements the Philosopher interface. Set up correct initial conditions of the fork
+// pickup ordering
 func (p *Philosopher) Start() {
 	// Determine fork order
 	if p.ID == shared.NPhils-1 {

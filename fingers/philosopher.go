@@ -5,21 +5,31 @@ import (
 	"github.com/wizardpb/diningphils-go/shared/philstate"
 )
 
+// Philosopher implementation
 type Philosopher struct {
 	*shared.PhilosopherBase
 }
 
-func (p *Philosopher) NewState() {
-	switch p.PhilosopherBase.State {
-	case philstate.Hungry:
-		// When eating w
-		p.PhilosopherBase.State = philstate.Eating
-		p.PhilosopherBase.Eat()
-	case philstate.Thinking:
-		p.PhilosopherBase.Think()
+// Execute implements the Philosopher interface for the Fingers implementation. Just start eating
+// when hungry
+func (p *Philosopher) Execute(m shared.Message) {
+	switch mt := m.(type) {
+	case shared.NewState:
+		// Update our state value
+		p.State = mt.NewState
+		switch p.State {
+		case philstate.Hungry:
+			// When eating with fingers - no need to wait for forks!
+			p.Eat()
+		case philstate.Thinking:
+			p.PhilosopherBase.StartThinking()
+		}
+	default:
+		panic("unknown message: " + m.String())
 	}
 }
 
+// Factory is the Philosopher and Fork creation function
 func Factory(params shared.CreateParams) (shared.Philosopher, shared.Fork) {
 	return &Philosopher{&shared.PhilosopherBase{
 			ID:          params.ID,

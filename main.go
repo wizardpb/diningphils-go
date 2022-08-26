@@ -31,6 +31,12 @@ func writeString(f *os.File, s string) {
 	}
 }
 
+// Wikipedia has a useful entry on this problem:
+// https://en.wikipedia.org/wiki/Dining_philosophers_problem
+//
+// The Chandy-Misra solution is described in the paper 'The Drinking Philosophers Problem',
+// https://www.cs.utexas.edu/users/misra/scannedPdf.dir/DrinkingPhil.pdf
+
 func main() {
 
 	if len(os.Args) < 2 {

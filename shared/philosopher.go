@@ -1,15 +1,12 @@
 package shared
 
-import (
-	"github.com/wizardpb/diningphils-go/shared/philstate"
-)
+import "github.com/wizardpb/diningphils-go/shared/philstate"
 
 type Philosopher interface {
 	GetID() int
-	SendMessage(m Message)
+	GetState() philstate.Enum
 	Messages() chan Message
-	NewState()
-	SetState(enum philstate.Enum)
+	Execute(m Message)
 	Runnable() bool
 	Start()
 }
@@ -26,9 +23,7 @@ type Factory func(params CreateParams) (Philosopher, Fork)
 func Run(p Philosopher) {
 	go func() {
 		for m := range p.Messages() {
-			if m.Process(p) {
-				p.NewState()
-			}
+			p.Execute(m)
 		}
 	}()
 	p.Start()

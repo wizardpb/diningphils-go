@@ -18,10 +18,10 @@ type screenImpl struct {
 }
 
 const (
-	csi        string = "\x1B["
-	gotoLine   string = csi + "%dH"
-	clearLine  string = csi + "2K"
-	clrScreeen string = csi + "2J"
+	csi       string = "\x1B["
+	gotoLine  string = csi + "%dH"
+	clearLine string = csi + "2K"
+	clrScreen string = csi + "2J"
 )
 
 var screen = screenImpl{0, make(chan writeMsg)}
@@ -37,7 +37,7 @@ func Write(pos int, line string) {
 }
 
 func Clear() {
-	screen.ch <- writeMsg{0, fmt.Sprintf(clrScreeen+gotoLine, 1), 0}
+	screen.ch <- writeMsg{0, fmt.Sprintf(clrScreen+gotoLine, 1), 0}
 }
 
 func Prompt(line int) {

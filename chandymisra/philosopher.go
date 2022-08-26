@@ -6,12 +6,14 @@ import (
 	"github.com/wizardpb/diningphils-go/shared/philstate"
 )
 
+// Philosopher implementation
 type Philosopher struct {
 	*shared.PhilosopherBase
 	// ForkRequest holds fork requests for left (index 0) and right (index 1) Forks (nil => not requested).
 	ForkRequest [2]bool
 }
 
+// Index of the fork request flag of fork f
 func (p *Philosopher) flagID(f shared.Fork) int {
 	switch {
 	case p.LeftFork() == f:
@@ -23,36 +25,12 @@ func (p *Philosopher) flagID(f shared.Fork) int {
 	}
 }
 
+// Convert to my implementation
 func asPhilosopher(p shared.Philosopher) *Philosopher {
 	return p.(*Philosopher)
 }
 
-func (p *Philosopher) newStateFor(f shared.Fork) {
-	mf := asFork(f)
-	switch {
-	case p.IsHungry() && p.HasRequestFor(f) && !f.IsHeldBy(p.ID):
-		// I'm hungry and I need a fork - request it from the appropriate philosopher
-		p.SetRequested(f, false)
-		p.philosopherFor(f).Messages() <- ForkRequestMessage{
-			Requester: p,
-			Fork:      f,
-		}
-		p.WriteString(fmt.Sprintf("requested fork %d", f.GetID()))
-	case !p.IsEating() && p.HasRequestFor(f) && f.IsHeldBy(p.ID) && mf.Dirty:
-		// I'm done eating and someone has requested a fork - free it then send
-		requestingPhilosopher := p.philosopherFor(f)
-		mf.Dirty = false
-		mf.SetFree()
-		requestingPhilosopher.Messages() <- ForkMessage{
-			Sender: p,
-			Fork:   f,
-		}
-		p.WriteString(fmt.Sprintf("sent fork %d to philosopher %d", f.GetID(), requestingPhilosopher.GetID()))
-	default:
-		// Otherwise, do nothing
-	}
-}
-
+// Who should I ask for Fork f ?
 func (p *Philosopher) philosopherFor(f shared.Fork) shared.Philosopher {
 	switch {
 	case p.IsLeftFork(f):
@@ -64,43 +42,96 @@ func (p *Philosopher) philosopherFor(f shared.Fork) shared.Philosopher {
 	}
 }
 
-func (p *Philosopher) SetRequested(f shared.Fork, b bool) {
+// Set the request flag for Fork f
+func (p *Philosopher) setRequested(f shared.Fork, b bool) {
 	p.ForkRequest[p.flagID(f)] = b
 }
 
-func (p *Philosopher) HasRequestFor(f shared.Fork) bool {
+// Do I have a request for Fork f?
+func (p *Philosopher) hasRequestFor(f shared.Fork) bool {
 	return p.ForkRequest[p.flagID(f)]
 }
 
-func (p *Philosopher) SetState(s philstate.Enum) {
-	p.WriteString(fmt.Sprintf("sets state %s", s))
-	p.PhilosopherBase.SetState(s)
-	if s == philstate.Thinking {
-		p.Think()
-	}
-}
-
-func (p *Philosopher) NewState() {
-	for _, tp := range []shared.Fork{p.LeftFork(), p.RightFork()} {
-		p.newStateFor(tp)
-	}
-
-	// Start eating if I am hungry and have both forks
-	if p.IsHungry() && p.LeftFork().IsHeldBy(p.ID) && p.RightFork().IsHeldBy(p.ID) {
-		p.Eat()
-	}
-}
-
+// Eat - check the invariants and dirty the forks before starting to eat
 func (p *Philosopher) Eat() {
-	// Dirty the forks first. We also need to set the state, as the base method doesn't
+	p.CheckEating()
+	// Dirty the forks first...
 	for _, mf := range []*Fork{asFork(p.LeftFork()), asFork(p.RightFork())} {
 		shared.Assert(func() bool { return mf.IsHeldBy(p.ID) }, " eating without holding a fork")
 		mf.Dirty = true
 	}
-	p.PhilosopherBase.State = philstate.Eating
 	p.PhilosopherBase.Eat()
 }
 
+// Execute implements the primary guarded command specified in the C&M paper:
+// https://www.cs.utexas.edu/users/misra/scannedPdf.dir/DrinkingPhil.pdf
+func (p *Philosopher) Execute(m shared.Message) {
+	// Update any state change indicated by the message...
+	switch mt := m.(type) {
+
+	case shared.NewState:
+		// Update our state value
+		p.State = mt.NewState
+		switch p.State {
+		case philstate.Hungry:
+			// No action here - taken care of below
+			break
+		case philstate.Thinking:
+			p.PhilosopherBase.StartThinking()
+		}
+
+	case ForkMessage:
+		// C&M (R4)
+		f := asFork(mt.Fork)
+		shared.Assert(func() bool { return !f.IsHeld() }, "fork %d already held by %d", f.ID, f.Holder)
+		p.WriteString(fmt.Sprintf("receives fork %d", f.ID))
+		f.SetHolder(p.ID)
+
+		// If we have both forks we can now eat! Both forks will now be dirty
+		if p.LeftFork().IsHeldBy(p.ID) && p.RightFork().IsHeldBy(p.ID) {
+			p.WriteString(fmt.Sprintf("holds both forks and can eat"))
+			p.Eat()
+		}
+
+	case ForkRequestMessage:
+		//C&M (R3)
+		shared.Assert(func() bool { return !p.hasRequestFor(mt.Fork) }, "fork %d has already been requested", mt.Fork.GetID())
+		p.WriteString(fmt.Sprintf("received fork request for %d", mt.Fork.GetID()))
+		p.setRequested(mt.Fork, true)
+
+	default:
+		p.WriteString("unknown message: " + m.String())
+	}
+
+	// ... and then check for any implied message send
+	for _, f := range []shared.Fork{p.LeftFork(), p.RightFork()} {
+		mf := asFork(f)
+		switch {
+
+		case p.IsHungry() && p.hasRequestFor(f) && !f.IsHeldBy(p.ID):
+			// C&M (R1): I'm hungry and I need a fork - request it from the appropriate philosopher
+			p.setRequested(f, false)
+			p.philosopherFor(f).Messages() <- ForkRequestMessage{
+				Requester: p,
+				Fork:      f,
+			}
+			p.WriteString(fmt.Sprintf("requested fork %d", f.GetID()))
+
+		case !p.IsEating() && p.hasRequestFor(f) && f.IsHeldBy(p.ID) && mf.Dirty:
+			// C&M (R2): I'm done eating and someone has requested a fork - free it then send
+			requestingPhilosopher := p.philosopherFor(f)
+			mf.Dirty = false
+			mf.SetFree()
+			requestingPhilosopher.Messages() <- ForkMessage{
+				Sender: p,
+				Fork:   f,
+			}
+			p.WriteString(fmt.Sprintf("sent fork %d to philosopher %d", f.GetID(), requestingPhilosopher.GetID()))
+		}
+	}
+}
+
+// Factory is the creation function for a Philosopher
 func Factory(params shared.CreateParams) (shared.Philosopher, shared.Fork) {
 	return &Philosopher{
 			PhilosopherBase: &shared.PhilosopherBase{
@@ -123,6 +154,7 @@ func Factory(params shared.CreateParams) (shared.Philosopher, shared.Fork) {
 		}
 }
 
+// Start implements the Philosopher interface
 func (p *Philosopher) Start() {
 	/*
 	 * Set initial conditions:
@@ -140,11 +172,11 @@ func (p *Philosopher) Start() {
 			mp.LeftFork().SetHolder(mp.ID)
 			mp.RightFork().SetHolder(mp.ID)
 		case 1:
-			mp.SetRequested(mp.LeftFork(), true)
-			mp.SetRequested(mp.RightFork(), true)
+			mp.setRequested(mp.LeftFork(), true)
+			mp.setRequested(mp.RightFork(), true)
 		default:
 			mp.LeftFork().SetHolder(mp.ID)
-			mp.SetRequested(mp.RightFork(), true)
+			mp.setRequested(mp.RightFork(), true)
 		}
 	}
 

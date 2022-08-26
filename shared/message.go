@@ -7,16 +7,10 @@ import (
 
 type Message interface {
 	fmt.Stringer
-	Process(p Philosopher) bool
 }
 
 type NewState struct {
 	NewState philstate.Enum
-}
-
-func (m NewState) Process(p Philosopher) bool {
-	p.SetState(m.NewState)
-	return true
 }
 
 func (m NewState) String() string {

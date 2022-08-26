@@ -16,16 +16,45 @@ type PhilosopherBase struct {
 	MessageChan chan Message
 }
 
-// Think - philosopher is thinking, arrange for them to go hungry
-func (pb *PhilosopherBase) Think() {
+// StartThinking - philosopher is thinking, arrange for them to go hungry
+func (pb *PhilosopherBase) StartThinking() {
 	pb.WriteString("starts thinking")
-	pb.DelaySend(pb.ThinkRange, &NewState{NewState: philstate.Hungry})
+	pb.DelaySend(pb.ThinkRange, NewState{NewState: philstate.Hungry})
 }
 
-// Eat - set the philosopher eating, arranve for them to finish and think
-func (pb *PhilosopherBase) Eat() {
+// StartEating - set the philosopher eating, arrange for them to finish and think
+func (pb *PhilosopherBase) StartEating() {
 	pb.WriteString("starts eating")
-	pb.DelaySend(pb.EatRange, &NewState{NewState: philstate.Thinking})
+	pb.DelaySend(pb.EatRange, NewState{NewState: philstate.Thinking})
+}
+
+// Eat - set the Philosopher in the Eat state
+func (pb *PhilosopherBase) Eat() {
+
+	pb.State = philstate.Eating
+	pb.StartEating()
+}
+
+// CheckEating checks two invariants that should be true when a Philosopher eats.
+// Implement this separately because the 'fingers' implementation intentionally violates this
+func (pb *PhilosopherBase) CheckEating() {
+	// Check the primary invariant - neither neighbor should be eating, and I should hold
+	// both forks
+	Assert(
+		func() bool {
+			return pb.LeftPhilosopher().GetState() != philstate.Eating &&
+				pb.RightPhilosopher().GetState() != philstate.Eating
+		},
+		"eat while a neighbor is eating",
+	)
+
+	Assert(
+		func() bool {
+			return pb.LeftFork().IsHeldBy(pb.ID) &&
+				pb.RightFork().IsHeldBy(pb.ID)
+		},
+		"eat without holding forks",
+	)
 }
 
 // IsHungry - is the philosopher hungry?
@@ -43,22 +72,11 @@ func (pb *PhilosopherBase) GetID() int {
 	return pb.ID
 }
 
-// SetState implements part of the Philosopher interface
-func (pb *PhilosopherBase) SetState(newState philstate.Enum) {
-	pb.State = newState
+func (pb *PhilosopherBase) GetState() philstate.Enum {
+	return pb.State
 }
 
-// SendMessage implements part of the Philosopher interface
-func (pb *PhilosopherBase) SendMessage(m Message) {
-	pb.MessageChan <- m
-}
-
-// RecvMessage implements part of the Philosopher interface
-func (pb *PhilosopherBase) RecvMessage() Message {
-	m := <-pb.MessageChan
-	return m
-}
-
+// Messages implements part of the Philosopher interface
 func (pb *PhilosopherBase) Messages() chan Message {
 	return pb.MessageChan
 }
@@ -66,7 +84,7 @@ func (pb *PhilosopherBase) Messages() chan Message {
 // Start implements part of the Philosopher interface
 func (pb *PhilosopherBase) Start() {
 	pb.State = philstate.Thinking
-	pb.Think()
+	pb.StartThinking()
 }
 
 // Runnable implements part of the Philosopher interface
