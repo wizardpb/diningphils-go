@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/wizardpb/diningphils-go/chandymisra"
 	"github.com/wizardpb/diningphils-go/fingers"
 	"github.com/wizardpb/diningphils-go/resourcehierarchy"
@@ -44,7 +43,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	screen.Clear()
+	screen.Initialize()
+
 	switch os.Args[1] {
 	case "fingers", "f":
 		Initialize(fingers.Factory)
@@ -61,27 +61,13 @@ func main() {
 		shared.Run(p)
 	}
 
-	readCmd()
-}
-
-const PromptLine = shared.NPhils + 2
-
-func readCmd() {
-	screen.Prompt(PromptLine)
-	run := true
-	for run {
-		var cmd string
-		_, err := fmt.Scanln(&cmd)
-		if err != nil {
-			screen.Write(PromptLine, err.Error())
-		}
-		switch cmd {
-		case "q", "Q":
-			run = false
-		default:
+	for {
+		cmd := shared.ReadCmd()
+		if cmd == "q" || cmd == "Q" {
 			break
 		}
-		screen.Prompt(PromptLine)
 	}
-	screen.Clear()
+
+	// We are done
+	screen.ClearScreen()
 }

@@ -103,8 +103,8 @@ func (pb *PhilosopherBase) WriteString(s string) {
 	case pb.HoldsFork(pb.RightFork()):
 		forkState = fmt.Sprintf(", holds fork %d", pb.rightForkID())
 	}
-	screen.Write(pb.ID+1, fmt.Sprintf("%s (%d,%s) %s%s", pb.Name, pb.ID, pb.State, s, forkState))
-	//fmt.Println(fmt.Sprintf("%s(%d) %s%s ", pb.Name, pb.ID, s, forkState))
+
+	screen.WriteScreenLine(ScreenPos+pb.ID, 1, fmt.Sprintf("%s (%d,%s) %s%s", pb.Name, pb.ID, pb.State, s, forkState))
 }
 
 // DelaySend sends the given messages to the Philosopher after a random wait given by t
