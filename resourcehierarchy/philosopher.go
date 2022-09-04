@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/wizardpb/diningphils-go/shared"
 	"github.com/wizardpb/diningphils-go/shared/philstate"
-	"sync"
 )
 
 // Philosopher implementation
@@ -50,25 +49,18 @@ func (p *Philosopher) Eat() {
 
 // Pick up a fork, wait if it's busy
 func (p *Philosopher) pickUp(f *Fork) {
-	f.cond.L.Lock()
-	// IsHeld() is correct here because we never pick up a fork without it being put down first
-	// The algorithm ensures that pickUp always 'happens before' putDown
-	for f.IsHeld() {
-		p.WriteString(fmt.Sprintf("is waiting for fork %d", f.ID))
-		f.cond.Wait()
-	}
-	p.WriteString(fmt.Sprintf("has fork %d", f.ID))
+	<-f.semChan
+	shared.Assert(func() bool { return !f.IsHeld() }, fmt.Sprintf("free fork shows it's owned by %d", f.Holder))
 	f.SetHolder(p.ID)
-	f.cond.L.Unlock()
+	p.WriteString(fmt.Sprintf("picks up fork %d", f.ID))
 }
 
 // Put the fork back down, and notify any wait-er
 func (p *Philosopher) putDown(f *Fork) {
-	f.cond.L.Lock()
+	shared.Assert(func() bool { return f.IsHeldBy(p.ID) }, fmt.Sprintf("freeing fork held by %d", f.Holder))
 	f.SetFree()
 	p.WriteString(fmt.Sprintf("puts down fork %d", f.ID))
-	f.cond.L.Unlock()
-	f.cond.Signal()
+	f.semChan <- freeToken{}
 }
 
 // Factory function for Philosopher and Fork
@@ -89,8 +81,14 @@ func Factory(params shared.CreateParams) (shared.Philosopher, shared.Fork) {
 			ID:     params.ID,
 			Holder: shared.UnOwned,
 		},
-		cond: sync.NewCond(new(sync.Mutex)),
+		// Capacity 1 allows the channel to act as a semaphore - empty means a receiver waits (sempahore Wait(), fork is busy)
+		// full means a receiver continues (semaphore Signal(), fork is free). Philosophers claim a fork by receiving, and
+		// free by sending a token.
+		semChan: make(chan freeToken, 1),
 	}
+
+	// Make sure the fork is free by filling the channel
+	f.semChan <- freeToken{}
 
 	return p, f
 }
