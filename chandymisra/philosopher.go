@@ -81,7 +81,7 @@ func (p *Philosopher) Execute(m shared.Message) {
 		}
 
 	case ForkMessage:
-		// C&M (R4)
+		// C&M (R4) - receive a fork
 		f := asFork(mt.Fork)
 		shared.Assert(func() bool { return !f.IsHeld() }, "fork %d already held by %d", f.ID, f.Holder)
 		p.WriteString(fmt.Sprintf("receives fork %d", f.ID))
@@ -94,7 +94,7 @@ func (p *Philosopher) Execute(m shared.Message) {
 		}
 
 	case ForkRequestMessage:
-		//C&M (R3)
+		//C&M (R3) - receive a fork request
 		shared.Assert(func() bool { return !p.hasRequestFor(mt.Fork) }, "fork %d has already been requested", mt.Fork.GetID())
 		p.WriteString(fmt.Sprintf("received fork request for %d", mt.Fork.GetID()))
 		p.setRequested(mt.Fork, true)
@@ -103,7 +103,8 @@ func (p *Philosopher) Execute(m shared.Message) {
 		p.WriteString("unknown message: " + m.String())
 	}
 
-	// ... and then check for any implied message send
+	// ... and then check for any implied message send.
+	// Fork each of my forks...
 	for _, f := range []shared.Fork{p.LeftFork(), p.RightFork()} {
 		mf := asFork(f)
 		switch {
@@ -118,7 +119,7 @@ func (p *Philosopher) Execute(m shared.Message) {
 			p.WriteString(fmt.Sprintf("requested fork %d", f.GetID()))
 
 		case !p.IsEating() && p.hasRequestFor(f) && f.IsHeldBy(p.ID) && mf.Dirty:
-			// C&M (R2): I'm done eating and someone has requested a fork - free it then send
+			// C&M (R2): I'm done eating and someone has requested a fork - free it (and clean it) then send it over
 			requestingPhilosopher := p.philosopherFor(f)
 			mf.Dirty = false
 			mf.SetFree()
@@ -162,19 +163,23 @@ func (p *Philosopher) Start() {
 	 * Set up forks so the dependency graph is acyclic: phil 0 has both forks, phil 1 has none,
 	 * the rest have the left fork only
 	 *
-	 * Request flags are set opposite this so that all philosophers can initially request the missing fork. Default is false
+	 * Request flags are set opposite this so that all philosophers can initially request the missing fork. The default
+	 * value is false so we only need to set the flag for the missing fork
 	 */
 
 	for _, p := range shared.Philosophers {
 		mp := asPhilosopher(p)
 		switch mp.ID {
 		case 0:
+			// Both request flags false
 			mp.LeftFork().SetHolder(mp.ID)
 			mp.RightFork().SetHolder(mp.ID)
 		case 1:
+			// Forks missing, set both request flags
 			mp.setRequested(mp.LeftFork(), true)
 			mp.setRequested(mp.RightFork(), true)
 		default:
+			// Hold the left fork, set the right request flag
 			mp.LeftFork().SetHolder(mp.ID)
 			mp.setRequested(mp.RightFork(), true)
 		}

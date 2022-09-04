@@ -44,6 +44,7 @@ type screenImpl struct {
 	stdOut        io.Writer
 }
 
+// ANSI control constants
 const (
 	esc            string = "\x1B"
 	csi            string = esc + "["
@@ -54,12 +55,14 @@ const (
 	chanBufferSize = 5
 )
 
+// The screen
 var (
 	screen *screenImpl
 )
 
 // Command implementations
 
+// write a string to the output dealing with errors. Return the number of characters written
 func safeWrite(w io.Writer, s string) int {
 	n, err := io.WriteString(w, s)
 	if err != nil {
@@ -68,12 +71,14 @@ func safeWrite(w io.Writer, s string) int {
 	return n
 }
 
+// write to the screen updating the charater position. We assume the screen does not wrap lines
 func (wm cursorPos) writeOn(thisScreen *screenImpl) {
 	// Update the cursor position
 	thisScreen.currentCursor = cursorPos{row: wm.row, col: wm.col}
 	safeWrite(thisScreen.stdOut, fmt.Sprintf(cursorPosition, wm.row, wm.col))
 }
 
+// Write a string at a given line, maintaining current cursor position
 func (wm writeScreenLine) writeOn(thisScreen *screenImpl) {
 	// Move and clear, write the string, then restore the current position
 	str := fmt.Sprintf(
@@ -101,6 +106,7 @@ func (wm clearLine) writeOn(thisScreen *screenImpl) {
 
 func (wm closeScreen) writeOn(_ *screenImpl) {}
 
+// WriteScreenLine writes some text at a given screen line (1-based)
 func WriteScreenLine(row int, col int, s string) {
 	screen.ch <- writeScreenLine{
 		cursor: cursorPos{
@@ -111,26 +117,32 @@ func WriteScreenLine(row int, col int, s string) {
 	}
 }
 
+// Write a string at the current cursor position
 func Write(s string) {
 	screen.ch <- writeStr{str: s}
 }
 
+// ClearScreen clears the screen and resets the cursor to 1,1
 func ClearScreen() {
 	screen.ch <- clearScreen{}
 }
 
+// ClearLine clears the current line
 func ClearLine() {
 	screen.ch <- clearLine{}
 }
 
+// PositionCursor moves the cursor to the given position (1-based)
 func PositionCursor(row, col int) {
 	screen.ch <- cursorPos{row, col}
 }
 
+// Close the screen
 func Close() {
 	screen.ch <- closeScreen{}
 }
 
+// Initialize initializes the screen representation and clears the actual screen
 func Initialize() {
 	screen = &screenImpl{currentCursor: cursorPos{1, 1}, ch: make(chan screenCmd, chanBufferSize), stdOut: os.Stdout}
 	go func() {

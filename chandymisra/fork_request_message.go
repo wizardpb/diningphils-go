@@ -11,6 +11,7 @@ type ForkRequestMessage struct {
 	Fork      shared.Fork
 }
 
+// String implements the Stringer interface
 func (m ForkRequestMessage) String() string {
 	return fmt.Sprintf("Philosopher %d requests fork %d", asPhilosopher(m.Requester).ID, asFork(m.Fork).ID)
 }

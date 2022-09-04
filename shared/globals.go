@@ -5,6 +5,7 @@ import (
 	"github.com/wizardpb/diningphils-go/screen"
 )
 
+// Control constants for timings, number of Philosophers,etc.
 const (
 	NPhils   int = 5
 	ThinkMin     = 5
@@ -28,6 +29,7 @@ var (
 	Forks        [NPhils]Fork
 )
 
+// ReadCmd reads and executes a command string from the terminal
 func ReadCmd() string {
 	screen.PositionCursor(PromptLine, 1)
 	screen.ClearLine()

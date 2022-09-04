@@ -20,6 +20,7 @@ var vals = map[Enum]string{
 	Stopped:  "Stopped",
 }
 
+// String function for the integer enums
 func (e Enum) String() string {
 	s, ok := vals[e]
 	if !ok {

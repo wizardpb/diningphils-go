@@ -8,6 +8,7 @@ type ForkBase struct {
 	Holder int // Who holds the fork - UnOwned if free
 }
 
+// GetIS returns the Fork ID
 func (f *ForkBase) GetID() int {
 	return f.ID
 }

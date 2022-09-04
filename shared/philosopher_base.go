@@ -72,22 +72,23 @@ func (pb *PhilosopherBase) GetID() int {
 	return pb.ID
 }
 
+// GetState returns the current Philosopher state
 func (pb *PhilosopherBase) GetState() philstate.Enum {
 	return pb.State
 }
 
-// Messages implements part of the Philosopher interface
+// Messages returms the message channel
 func (pb *PhilosopherBase) Messages() chan Message {
 	return pb.MessageChan
 }
 
-// Start implements part of the Philosopher interface
+// Start sets the philosopher thinking
 func (pb *PhilosopherBase) Start() {
 	pb.State = philstate.Thinking
 	pb.StartThinking()
 }
 
-// Runnable implements part of the Philosopher interface
+// Runnable returns true if the Philosopher is runnable
 func (pb *PhilosopherBase) Runnable() bool {
 	return pb.State != philstate.Stopped
 }
@@ -133,24 +134,29 @@ func (pb *PhilosopherBase) RightFork() Fork {
 	return Forks[pb.rightForkID()]
 }
 
+// IsLeftFork returns true if the passed in fork is to the left of this Philosopher
 func (pb *PhilosopherBase) IsLeftFork(f Fork) bool {
 	return f == pb.LeftFork()
 }
 
+// IsRightFork returns true if the passed in fork is to the right of this Philosopher
 func (pb *PhilosopherBase) IsRightFork(f Fork) bool {
 	return f == pb.RightFork()
 }
 
+// HoldsFork returns true if this Philosopher is holding Fork f
 func (pb *PhilosopherBase) HoldsFork(f Fork) bool {
 	return f.IsHeldBy(pb.ID)
 }
 
+// LeftPhilosopher returns the Philosopher to the left of me
 func (pb *PhilosopherBase) LeftPhilosopher() Philosopher {
 	// Add NPhils to avoid a negative index
 	index := (pb.ID + NPhils - 1) % NPhils
 	return Philosophers[index]
 }
 
+// RightPhilosopher returns the Philosopher to the right of me
 func (pb *PhilosopherBase) RightPhilosopher() Philosopher {
 	index := (pb.ID + 1) % NPhils
 	return Philosophers[index]
