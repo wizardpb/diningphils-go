@@ -41,4 +41,4 @@ get more than their fair share of spaghetti.
 The Chandy-Misra solution relies on a distributed algorithm that allows philosophers to communicate with each other. See
 (https://www.cs.utexas.edu/users/misra/scannedPdf.dir/DrinkingPhil.pdf). The idea here is to model the conflict on resources as a directed
 graph, and prove that if such a graph is acyclic, no deadlocks will occur. The algorithm is proved correct
-by proving that any state transformation that it produces does not make this graph acyclic.
+by proving that any state transformation that it produces maintains the acyclic property of the graph.
