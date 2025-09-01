@@ -5,7 +5,7 @@ import (
 	"github.com/wizardpb/diningphils-go/shared"
 )
 
-// ForkMessage is a messages that sends a ForkMessage to a Philosopher
+// ForkMessage is a messages that sends a Fork to a Philosopher
 type ForkMessage struct {
 	Sender shared.Philosopher
 	Fork   shared.Fork
