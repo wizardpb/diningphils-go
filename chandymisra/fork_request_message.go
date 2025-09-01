@@ -5,7 +5,7 @@ import (
 	"github.com/wizardpb/diningphils-go/shared"
 )
 
-// ForkRequestMessage requests a ForkMessage from a Philosopher. Reception causes the fork request flag to be set
+// ForkRequestMessage requests a Fork from a Philosopher. Reception causes the fork request flag to be set
 type ForkRequestMessage struct {
 	Requester shared.Philosopher
 	Fork      shared.Fork
